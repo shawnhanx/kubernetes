@@ -22,12 +22,12 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/tools/record"
+	toolsevents "k8s.io/client-go/tools/events"
 	"k8s.io/klog/v2"
 	kubecontainer "k8s.io/kubernetes/pkg/kubelet/container"
 	"k8s.io/kubernetes/pkg/kubelet/events"
@@ -127,7 +127,7 @@ type podWorkers struct {
 	syncPodFn syncPodFnType
 
 	// The EventRecorder to use
-	recorder record.EventRecorder
+	recorder toolsevents.EventRecorder
 
 	// backOffPeriod is the duration to back off when there is a sync error.
 	backOffPeriod time.Duration
@@ -139,7 +139,7 @@ type podWorkers struct {
 	podCache kubecontainer.Cache
 }
 
-func newPodWorkers(syncPodFn syncPodFnType, recorder record.EventRecorder, workQueue queue.WorkQueue,
+func newPodWorkers(syncPodFn syncPodFnType, recorder toolsevents.EventRecorder, workQueue queue.WorkQueue,
 	resyncInterval, backOffPeriod time.Duration, podCache kubecontainer.Cache) *podWorkers {
 	return &podWorkers{
 		podUpdates:                map[types.UID]chan UpdatePodOptions{},
@@ -168,7 +168,7 @@ func (p *podWorkers) managePodLoop(podUpdates <-chan UpdatePodOptions) {
 			if err != nil {
 				// This is the legacy event thrown by manage pod loop
 				// all other events are now dispatched from syncPodFn
-				p.recorder.Eventf(update.Pod, v1.EventTypeWarning, events.FailedSync, "error determining status: %v", err)
+				p.recorder.Eventf(update.Pod, nil, v1.EventTypeWarning, events.FailedSync, "syncing Pod", "error determining status: %v", err)
 				return err
 			}
 			err = p.syncPodFn(syncPodOptions{
@@ -288,7 +288,7 @@ func (p *podWorkers) checkForUpdates(uid types.UID) {
 
 // killPodNow returns a KillPodFunc that can be used to kill a pod.
 // It is intended to be injected into other modules that need to kill a pod.
-func killPodNow(podWorkers PodWorkers, recorder record.EventRecorder) eviction.KillPodFunc {
+func killPodNow(podWorkers PodWorkers, recorder toolsevents.EventRecorder) eviction.KillPodFunc {
 	return func(pod *v1.Pod, status v1.PodStatus, gracePeriodOverride *int64) error {
 		// determine the grace period to use when killing the pod
 		gracePeriod := int64(0)
@@ -331,7 +331,7 @@ func killPodNow(podWorkers PodWorkers, recorder record.EventRecorder) eviction.K
 		case r := <-ch:
 			return r.err
 		case <-time.After(timeoutDuration):
-			recorder.Eventf(pod, v1.EventTypeWarning, events.ExceededGracePeriod, "Container runtime did not kill the pod within specified grace period.")
+			recorder.Eventf(pod, nil, v1.EventTypeWarning, events.ExceededGracePeriod, "Waiting to Kill Pod", "Container runtime did not kill the pod within specified grace period.")
 			return fmt.Errorf("timeout waiting to kill pod")
 		}
 	}

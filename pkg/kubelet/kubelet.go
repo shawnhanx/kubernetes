@@ -51,7 +51,7 @@ import (
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
+	toolsevents "k8s.io/client-go/tools/events"
 	"k8s.io/client-go/util/certificate"
 	"k8s.io/client-go/util/flowcontrol"
 	cloudprovider "k8s.io/cloud-provider"
@@ -233,7 +233,7 @@ type Dependencies struct {
 	OOMAdjuster             *oom.OOMAdjuster
 	OSInterface             kubecontainer.OSInterface
 	PodConfig               *config.PodConfig
-	Recorder                record.EventRecorder
+	Recorder                toolsevents.EventRecorder
 	Subpather               subpath.Interface
 	VolumePlugins           []volume.VolumePlugin
 	DynamicPluginProber     volume.DynamicPluginProber
@@ -946,7 +946,7 @@ type Kubelet struct {
 	streamingConnectionIdleTimeout time.Duration
 
 	// The EventRecorder to use
-	recorder record.EventRecorder
+	recorder toolsevents.EventRecorder
 
 	// Policy for handling garbage collection of dead containers.
 	containerGC kubecontainer.GC
@@ -1283,7 +1283,7 @@ func (kl *Kubelet) StartGarbageCollection() {
 	go wait.Until(func() {
 		if err := kl.containerGC.GarbageCollect(); err != nil {
 			klog.ErrorS(err, "Container garbage collection failed")
-			kl.recorder.Eventf(kl.nodeRef, v1.EventTypeWarning, events.ContainerGCFailed, err.Error())
+			kl.recorder.Eventf(kl.nodeRef, nil, v1.EventTypeWarning, events.ContainerGCFailed, "Garbage Collecting", err.Error())
 			loggedContainerGCFailure = true
 		} else {
 			var vLevel klog.Level = 4
@@ -1308,7 +1308,7 @@ func (kl *Kubelet) StartGarbageCollection() {
 			if prevImageGCFailed {
 				klog.ErrorS(err, "Image garbage collection failed multiple times in a row")
 				// Only create an event for repeated failures
-				kl.recorder.Eventf(kl.nodeRef, v1.EventTypeWarning, events.ImageGCFailed, err.Error())
+				kl.recorder.Eventf(kl.nodeRef, nil, v1.EventTypeWarning, events.ImageGCFailed, "Image Garbage Collecting", err.Error())
 			} else {
 				klog.ErrorS(err, "Image garbage collection failed once. Stats initialization may not have completed yet")
 			}
@@ -1427,7 +1427,7 @@ func (kl *Kubelet) Run(updates <-chan kubetypes.PodUpdate) {
 	}
 
 	if err := kl.initializeModules(); err != nil {
-		kl.recorder.Eventf(kl.nodeRef, v1.EventTypeWarning, events.KubeletSetupFailed, err.Error())
+		kl.recorder.Eventf(kl.nodeRef, nil, v1.EventTypeWarning, events.KubeletSetupFailed, "Starting KubeletSetup", err.Error())
 		klog.ErrorS(err, "failed to intialize internal modules")
 		os.Exit(1)
 	}
@@ -1511,7 +1511,7 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 		kl.statusManager.SetPodStatus(pod, apiPodStatus)
 		// we kill the pod with the specified grace period since this is a termination
 		if err := kl.killPod(pod, nil, podStatus, killPodOptions.PodTerminationGracePeriodSecondsOverride); err != nil {
-			kl.recorder.Eventf(pod, v1.EventTypeWarning, events.FailedToKillPod, "error killing pod: %v", err)
+			kl.recorder.Eventf(pod, nil, v1.EventTypeWarning, events.FailedToKillPod, "Killing Pod", "error killing pod: %v", err)
 			// there was an error killing the pod, so we return that error directly
 			utilruntime.HandleError(err)
 			return err
@@ -1596,7 +1596,7 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 	if !runnable.Admit || pod.DeletionTimestamp != nil || apiPodStatus.Phase == v1.PodFailed {
 		var syncErr error
 		if err := kl.killPod(pod, nil, podStatus, nil); err != nil {
-			kl.recorder.Eventf(pod, v1.EventTypeWarning, events.FailedToKillPod, "error killing pod: %v", err)
+			kl.recorder.Eventf(pod, nil, v1.EventTypeWarning, events.FailedToKillPod, "Killing Pod", "error killing pod: %v", err)
 			syncErr = fmt.Errorf("error killing pod: %v", err)
 			utilruntime.HandleError(syncErr)
 		} else {
@@ -1611,7 +1611,7 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 
 	// If the network plugin is not ready, only start the pod if it uses the host network
 	if err := kl.runtimeState.networkErrors(); err != nil && !kubecontainer.IsHostNetworkPod(pod) {
-		kl.recorder.Eventf(pod, v1.EventTypeWarning, events.NetworkNotReady, "%s: %v", NetworkNotReadyErrorMsg, err)
+		kl.recorder.Eventf(pod, nil, v1.EventTypeWarning, events.NetworkNotReady, "Preparing Network", "%s: %v", NetworkNotReadyErrorMsg, err)
 		return fmt.Errorf("%s: %v", NetworkNotReadyErrorMsg, err)
 	}
 
@@ -1656,7 +1656,7 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 					klog.V(2).InfoS("Failed to update QoS cgroups while syncing pod", "pod", klog.KObj(pod), "err", err)
 				}
 				if err := pcm.EnsureExists(pod); err != nil {
-					kl.recorder.Eventf(pod, v1.EventTypeWarning, events.FailedToCreatePodContainer, "unable to ensure pod container exists: %v", err)
+					kl.recorder.Eventf(pod, nil, v1.EventTypeWarning, events.FailedToCreatePodContainer, "Creating PodContainer", "unable to ensure pod container exists: %v", err)
 					return fmt.Errorf("failed to ensure that the pod: %v cgroups exist and are correctly applied: %v", pod.UID, err)
 				}
 			}
@@ -1695,7 +1695,7 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 
 	// Make data directories for the pod
 	if err := kl.makePodDataDirs(pod); err != nil {
-		kl.recorder.Eventf(pod, v1.EventTypeWarning, events.FailedToMakePodDataDirectories, "error making pod data directories: %v", err)
+		kl.recorder.Eventf(pod, nil, v1.EventTypeWarning, events.FailedToMakePodDataDirectories, "Making PodDataDirectories", "error making pod data directories: %v", err)
 		klog.ErrorS(err, "Unable to make pod data directories for pod", "pod", klog.KObj(pod))
 		return err
 	}
@@ -1704,7 +1704,7 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 	if !kl.podIsTerminated(pod) {
 		// Wait for volumes to attach/mount
 		if err := kl.volumeManager.WaitForAttachAndMount(pod); err != nil {
-			kl.recorder.Eventf(pod, v1.EventTypeWarning, events.FailedMountVolume, "Unable to attach or mount volumes: %v", err)
+			kl.recorder.Eventf(pod, nil, v1.EventTypeWarning, events.FailedMountVolume, "Mounting Volume", "Unable to attach or mount volumes: %v", err)
 			klog.ErrorS(err, "Unable to attach or mount volumes for pod; skipping pod", "pod", klog.KObj(pod))
 			return err
 		}
@@ -1803,7 +1803,7 @@ func (kl *Kubelet) deletePod(pod *v1.Pod) error {
 // rejectPod records an event about the pod with the given reason and message,
 // and updates the pod to the failed phase in the status manage.
 func (kl *Kubelet) rejectPod(pod *v1.Pod, reason, message string) {
-	kl.recorder.Eventf(pod, v1.EventTypeWarning, reason, message)
+	kl.recorder.Eventf(pod, nil, v1.EventTypeWarning, reason, "Rejecting Pod", message)
 	kl.statusManager.SetPodStatus(pod, v1.PodStatus{
 		Phase:   v1.PodFailed,
 		Reason:  reason,
@@ -2242,7 +2242,7 @@ func (kl *Kubelet) GetConfiguration() kubeletconfiginternal.KubeletConfiguration
 // BirthCry sends an event that the kubelet has started up.
 func (kl *Kubelet) BirthCry() {
 	// Make an event that kubelet restarted.
-	kl.recorder.Eventf(kl.nodeRef, v1.EventTypeNormal, events.StartingKubelet, "Starting kubelet.")
+	kl.recorder.Eventf(kl.nodeRef, nil, v1.EventTypeNormal, events.StartingKubelet, "Starting kubelet", "Starting kubelet.")
 }
 
 // ResyncInterval returns the interval used for periodic syncs.

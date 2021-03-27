@@ -33,7 +33,7 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	storagelisters "k8s.io/client-go/listers/storage/v1"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/kubernetes/pkg/kubelet/configmap"
 	"k8s.io/kubernetes/pkg/kubelet/secret"
@@ -274,7 +274,7 @@ func (kvh *kubeletVolumeHost) GetNodeName() types.NodeName {
 	return kvh.kubelet.nodeName
 }
 
-func (kvh *kubeletVolumeHost) GetEventRecorder() record.EventRecorder {
+func (kvh *kubeletVolumeHost) GetEventRecorder() events.EventRecorder {
 	return kvh.kubelet.recorder
 }
 

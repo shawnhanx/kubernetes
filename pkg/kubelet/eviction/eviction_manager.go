@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/clock"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	v1helper "k8s.io/component-helpers/scheduling/corev1"
 	statsapi "k8s.io/kubelet/pkg/apis/stats/v1alpha1"
 	apiv1resource "k8s.io/kubernetes/pkg/api/v1/resource"
@@ -79,7 +79,7 @@ type managerImpl struct {
 	// nodeRef is a reference to the node
 	nodeRef *v1.ObjectReference
 	// used to record events about the node
-	recorder record.EventRecorder
+	recorder events.EventRecorder
 	// used to measure usage stats on system
 	summaryProvider stats.SummaryProvider
 	// records when a threshold was first observed
@@ -111,7 +111,7 @@ func NewManager(
 	mirrorPodFunc MirrorPodFunc,
 	imageGC ImageGC,
 	containerGC ContainerGC,
-	recorder record.EventRecorder,
+	recorder events.EventRecorder,
 	nodeRef *v1.ObjectReference,
 	clock clock.Clock,
 ) (Manager, lifecycle.PodAdmitHandler) {
@@ -339,7 +339,7 @@ func (m *managerImpl) synchronize(diskInfoProvider DiskInfoProvider, podFunc Act
 	klog.InfoS("Eviction manager: attempting to reclaim", "resourceName", resourceToReclaim)
 
 	// record an event about the resources we are now attempting to reclaim via eviction
-	m.recorder.Eventf(m.nodeRef, v1.EventTypeWarning, "EvictionThresholdMet", "Attempting to reclaim %s", resourceToReclaim)
+	m.recorder.Eventf(m.nodeRef, nil, v1.EventTypeWarning, "EvictionThresholdMet", "EvictionThresholdMet", "Attempting to reclaim %s", resourceToReclaim)
 
 	// check if there are node-level resources we can reclaim to reduce pressure before evicting end-user pods.
 	if m.reclaimNodeLevelResources(thresholdToReclaim.Signal, resourceToReclaim) {
@@ -566,7 +566,7 @@ func (m *managerImpl) evictPod(pod *v1.Pod, gracePeriodOverride int64, evictMsg 
 		Reason:  Reason,
 	}
 	// record that we are evicting the pod
-	m.recorder.AnnotatedEventf(pod, annotations, v1.EventTypeWarning, Reason, evictMsg)
+	m.recorder.Eventf(pod, nil, v1.EventTypeWarning, Reason, "Evicting", evictMsg)
 	// this is a blocking call and should only return when the pod and its containers are killed.
 	err := m.killPodFunc(pod, status, &gracePeriodOverride)
 	if err != nil {

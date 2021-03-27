@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"math"
 
-	"k8s.io/api/core/v1"
-	"k8s.io/client-go/tools/record"
+	v1 "k8s.io/api/core/v1"
+	toolsevents "k8s.io/client-go/tools/events"
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/api/v1/resource"
 	v1qos "k8s.io/kubernetes/pkg/apis/core/v1/helper/qos"
@@ -44,12 +44,12 @@ const message = "Preempted in order to admit critical pod"
 type CriticalPodAdmissionHandler struct {
 	getPodsFunc eviction.ActivePodsFunc
 	killPodFunc eviction.KillPodFunc
-	recorder    record.EventRecorder
+	recorder    toolsevents.EventRecorder
 }
 
 var _ lifecycle.AdmissionFailureHandler = &CriticalPodAdmissionHandler{}
 
-func NewCriticalPodAdmissionHandler(getPodsFunc eviction.ActivePodsFunc, killPodFunc eviction.KillPodFunc, recorder record.EventRecorder) *CriticalPodAdmissionHandler {
+func NewCriticalPodAdmissionHandler(getPodsFunc eviction.ActivePodsFunc, killPodFunc eviction.KillPodFunc, recorder toolsevents.EventRecorder) *CriticalPodAdmissionHandler {
 	return &CriticalPodAdmissionHandler{
 		getPodsFunc: getPodsFunc,
 		killPodFunc: killPodFunc,
@@ -103,7 +103,7 @@ func (c *CriticalPodAdmissionHandler) evictPodsToFreeRequests(admitPod *v1.Pod, 
 			Reason:  events.PreemptContainer,
 		}
 		// record that we are evicting the pod
-		c.recorder.Eventf(pod, v1.EventTypeWarning, events.PreemptContainer, message)
+		c.recorder.Eventf(pod, nil, v1.EventTypeWarning, events.PreemptContainer, "Preempting", message)
 		// this is a blocking call and should only return when the pod and its containers are killed.
 		err := c.killPodFunc(pod, status, nil)
 		if err != nil {

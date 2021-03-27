@@ -20,10 +20,10 @@ import (
 	"fmt"
 	"testing"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	kubeapi "k8s.io/kubernetes/pkg/apis/core"
 	"k8s.io/kubernetes/pkg/apis/scheduling"
 )
@@ -86,7 +86,7 @@ func getTestCriticalPodAdmissionHandler(podProvider *fakePodProvider, podKiller 
 	return &CriticalPodAdmissionHandler{
 		getPodsFunc: podProvider.getPods,
 		killPodFunc: podKiller.killPodNow,
-		recorder:    &record.FakeRecorder{},
+		recorder:    &events.FakeRecorder{},
 	}
 }
 

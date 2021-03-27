@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"time"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/clock"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/kubernetes/pkg/kubelet/lifecycle"
 	"k8s.io/kubernetes/pkg/kubelet/status"
 )
@@ -39,13 +39,13 @@ type activeDeadlineHandler struct {
 	// the provider of pod status
 	podStatusProvider status.PodStatusProvider
 	// the recorder to dispatch events when we identify a pod has exceeded active deadline
-	recorder record.EventRecorder
+	recorder events.EventRecorder
 }
 
 // newActiveDeadlineHandler returns an active deadline handler that can enforce pod active deadline
 func newActiveDeadlineHandler(
 	podStatusProvider status.PodStatusProvider,
-	recorder record.EventRecorder,
+	recorder events.EventRecorder,
 	clock clock.Clock,
 ) (*activeDeadlineHandler, error) {
 
@@ -71,7 +71,7 @@ func (m *activeDeadlineHandler) ShouldEvict(pod *v1.Pod) lifecycle.ShouldEvictRe
 	if !m.pastActiveDeadline(pod) {
 		return lifecycle.ShouldEvictResponse{Evict: false}
 	}
-	m.recorder.Eventf(pod, v1.EventTypeNormal, reason, message)
+	m.recorder.Eventf(pod, nil, v1.EventTypeNormal, reason, "evicting", message)
 	return lifecycle.ShouldEvictResponse{Evict: true, Reason: reason, Message: message}
 }
 

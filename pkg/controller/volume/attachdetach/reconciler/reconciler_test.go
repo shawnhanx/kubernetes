@@ -20,11 +20,11 @@ import (
 	"testing"
 	"time"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/informers"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/kubernetes/pkg/controller"
 	"k8s.io/kubernetes/pkg/controller/volume/attachdetach/cache"
 	"k8s.io/kubernetes/pkg/controller/volume/attachdetach/statusupdater"
@@ -49,7 +49,7 @@ func Test_Run_Positive_DoNothing(t *testing.T) {
 	dsw := cache.NewDesiredStateOfWorld(volumePluginMgr)
 	asw := cache.NewActualStateOfWorld(volumePluginMgr)
 	fakeKubeClient := controllervolumetesting.CreateTestClient()
-	fakeRecorder := &record.FakeRecorder{}
+	fakeRecorder := &events.FakeRecorder{}
 	fakeHandler := volumetesting.NewBlockVolumePathHandler()
 	ad := operationexecutor.NewOperationExecutor(operationexecutor.NewOperationGenerator(
 		fakeKubeClient,
@@ -85,7 +85,7 @@ func Test_Run_Positive_OneDesiredVolumeAttach(t *testing.T) {
 	dsw := cache.NewDesiredStateOfWorld(volumePluginMgr)
 	asw := cache.NewActualStateOfWorld(volumePluginMgr)
 	fakeKubeClient := controllervolumetesting.CreateTestClient()
-	fakeRecorder := &record.FakeRecorder{}
+	fakeRecorder := &events.FakeRecorder{}
 	fakeHandler := volumetesting.NewBlockVolumePathHandler()
 	ad := operationexecutor.NewOperationExecutor(operationexecutor.NewOperationGenerator(
 		fakeKubeClient,
@@ -137,7 +137,7 @@ func Test_Run_Positive_OneDesiredVolumeAttachThenDetachWithUnmountedVolume(t *te
 	dsw := cache.NewDesiredStateOfWorld(volumePluginMgr)
 	asw := cache.NewActualStateOfWorld(volumePluginMgr)
 	fakeKubeClient := controllervolumetesting.CreateTestClient()
-	fakeRecorder := &record.FakeRecorder{}
+	fakeRecorder := &events.FakeRecorder{}
 	fakeHandler := volumetesting.NewBlockVolumePathHandler()
 	ad := operationexecutor.NewOperationExecutor(operationexecutor.NewOperationGenerator(
 		fakeKubeClient,
@@ -210,7 +210,7 @@ func Test_Run_Positive_OneDesiredVolumeAttachThenDetachWithMountedVolume(t *test
 	dsw := cache.NewDesiredStateOfWorld(volumePluginMgr)
 	asw := cache.NewActualStateOfWorld(volumePluginMgr)
 	fakeKubeClient := controllervolumetesting.CreateTestClient()
-	fakeRecorder := &record.FakeRecorder{}
+	fakeRecorder := &events.FakeRecorder{}
 	fakeHandler := volumetesting.NewBlockVolumePathHandler()
 	ad := operationexecutor.NewOperationExecutor(operationexecutor.NewOperationGenerator(
 		fakeKubeClient,
@@ -283,7 +283,7 @@ func Test_Run_Negative_OneDesiredVolumeAttachThenDetachWithUnmountedVolumeUpdate
 	dsw := cache.NewDesiredStateOfWorld(volumePluginMgr)
 	asw := cache.NewActualStateOfWorld(volumePluginMgr)
 	fakeKubeClient := controllervolumetesting.CreateTestClient()
-	fakeRecorder := &record.FakeRecorder{}
+	fakeRecorder := &events.FakeRecorder{}
 	fakeHandler := volumetesting.NewBlockVolumePathHandler()
 	ad := operationexecutor.NewOperationExecutor(operationexecutor.NewOperationGenerator(
 		fakeKubeClient,
@@ -359,7 +359,7 @@ func Test_Run_OneVolumeAttachAndDetachMultipleNodesWithReadWriteMany(t *testing.
 	dsw := cache.NewDesiredStateOfWorld(volumePluginMgr)
 	asw := cache.NewActualStateOfWorld(volumePluginMgr)
 	fakeKubeClient := controllervolumetesting.CreateTestClient()
-	fakeRecorder := &record.FakeRecorder{}
+	fakeRecorder := &events.FakeRecorder{}
 	fakeHandler := volumetesting.NewBlockVolumePathHandler()
 	ad := operationexecutor.NewOperationExecutor(operationexecutor.NewOperationGenerator(
 		fakeKubeClient,
@@ -452,7 +452,7 @@ func Test_Run_OneVolumeAttachAndDetachMultipleNodesWithReadWriteOnce(t *testing.
 	dsw := cache.NewDesiredStateOfWorld(volumePluginMgr)
 	asw := cache.NewActualStateOfWorld(volumePluginMgr)
 	fakeKubeClient := controllervolumetesting.CreateTestClient()
-	fakeRecorder := &record.FakeRecorder{}
+	fakeRecorder := &events.FakeRecorder{}
 	fakeHandler := volumetesting.NewBlockVolumePathHandler()
 	ad := operationexecutor.NewOperationExecutor(operationexecutor.NewOperationGenerator(
 		fakeKubeClient,
@@ -543,7 +543,7 @@ func Test_Run_OneVolumeAttachAndDetachUncertainNodesWithReadWriteOnce(t *testing
 	dsw := cache.NewDesiredStateOfWorld(volumePluginMgr)
 	asw := cache.NewActualStateOfWorld(volumePluginMgr)
 	fakeKubeClient := controllervolumetesting.CreateTestClient()
-	fakeRecorder := &record.FakeRecorder{}
+	fakeRecorder := &events.FakeRecorder{}
 	fakeHandler := volumetesting.NewBlockVolumePathHandler()
 	ad := operationexecutor.NewOperationExecutor(operationexecutor.NewOperationGenerator(
 		fakeKubeClient,
@@ -610,7 +610,7 @@ func Test_Run_OneVolumeAttachAndDetachTimeoutNodesWithReadWriteOnce(t *testing.T
 	dsw := cache.NewDesiredStateOfWorld(volumePluginMgr)
 	asw := cache.NewActualStateOfWorld(volumePluginMgr)
 	fakeKubeClient := controllervolumetesting.CreateTestClient()
-	fakeRecorder := &record.FakeRecorder{}
+	fakeRecorder := &events.FakeRecorder{}
 	fakeHandler := volumetesting.NewBlockVolumePathHandler()
 	ad := operationexecutor.NewOperationExecutor(operationexecutor.NewOperationGenerator(
 		fakeKubeClient,
@@ -716,7 +716,7 @@ func Test_ReportMultiAttachError(t *testing.T) {
 		dsw := cache.NewDesiredStateOfWorld(volumePluginMgr)
 		asw := cache.NewActualStateOfWorld(volumePluginMgr)
 		fakeKubeClient := controllervolumetesting.CreateTestClient()
-		fakeRecorder := record.NewFakeRecorder(100)
+		fakeRecorder := events.NewFakeRecorder(100)
 		fakeHandler := volumetesting.NewBlockVolumePathHandler()
 		ad := operationexecutor.NewOperationExecutor(operationexecutor.NewOperationGenerator(
 			fakeKubeClient,

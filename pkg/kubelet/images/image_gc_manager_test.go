@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"k8s.io/apimachinery/pkg/util/clock"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	statsapi "k8s.io/kubelet/pkg/apis/stats/v1alpha1"
 	"k8s.io/kubernetes/pkg/kubelet/container"
 	containertest "k8s.io/kubernetes/pkg/kubelet/container/testing"
@@ -43,7 +43,7 @@ func newRealImageGCManager(policy ImageGCPolicy) (*realImageGCManager, *containe
 		policy:        policy,
 		imageRecords:  make(map[string]*imageRecord),
 		statsProvider: mockStatsProvider,
-		recorder:      &record.FakeRecorder{},
+		recorder:      &events.FakeRecorder{},
 		sandboxImage:  sandboxImage,
 	}, fakeRuntime, mockStatsProvider
 }
@@ -452,7 +452,7 @@ func TestGarbageCollectImageNotOldEnough(t *testing.T) {
 		policy:        policy,
 		imageRecords:  make(map[string]*imageRecord),
 		statsProvider: mockStatsProvider,
-		recorder:      &record.FakeRecorder{},
+		recorder:      &events.FakeRecorder{},
 	}
 
 	fakeRuntime.ImageList = []container.Image{

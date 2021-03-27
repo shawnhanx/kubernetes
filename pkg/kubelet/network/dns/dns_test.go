@@ -29,7 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
 
 	"github.com/stretchr/testify/assert"
@@ -37,7 +37,7 @@ import (
 )
 
 var (
-	fetchEvent = func(recorder *record.FakeRecorder) string {
+	fetchEvent = func(recorder *events.FakeRecorder) string {
 		select {
 		case event := <-recorder.Events:
 			return event
@@ -100,7 +100,7 @@ func TestParseResolvConf(t *testing.T) {
 }
 
 func TestFormDNSSearchFitsLimits(t *testing.T) {
-	recorder := record.NewFakeRecorder(20)
+	recorder := events.NewFakeRecorder(20)
 	nodeRef := &v1.ObjectReference{
 		Kind:      "Node",
 		Name:      string("testNode"),
@@ -162,7 +162,7 @@ func TestFormDNSSearchFitsLimits(t *testing.T) {
 }
 
 func TestFormDNSNameserversFitsLimits(t *testing.T) {
-	recorder := record.NewFakeRecorder(20)
+	recorder := events.NewFakeRecorder(20)
 	nodeRef := &v1.ObjectReference{
 		Kind:      "Node",
 		Name:      string("testNode"),
@@ -267,7 +267,7 @@ func TestMergeDNSOptions(t *testing.T) {
 }
 
 func TestGetPodDNSType(t *testing.T) {
-	recorder := record.NewFakeRecorder(20)
+	recorder := events.NewFakeRecorder(20)
 	nodeRef := &v1.ObjectReference{
 		Kind:      "Node",
 		Name:      string("testNode"),
@@ -371,7 +371,7 @@ func TestGetPodDNSType(t *testing.T) {
 }
 
 func TestGetPodDNS(t *testing.T) {
-	recorder := record.NewFakeRecorder(20)
+	recorder := events.NewFakeRecorder(20)
 	nodeRef := &v1.ObjectReference{
 		Kind:      "Node",
 		Name:      string("testNode"),
@@ -466,7 +466,7 @@ func TestGetPodDNS(t *testing.T) {
 }
 
 func TestGetPodDNSCustom(t *testing.T) {
-	recorder := record.NewFakeRecorder(20)
+	recorder := events.NewFakeRecorder(20)
 	nodeRef := &v1.ObjectReference{
 		Kind:      "Node",
 		Name:      string("testNode"),

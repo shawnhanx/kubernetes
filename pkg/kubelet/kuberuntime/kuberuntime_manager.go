@@ -32,7 +32,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	utilversion "k8s.io/apimachinery/pkg/util/version"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
-	"k8s.io/client-go/tools/record"
+	toolsevents "k8s.io/client-go/tools/events"
 	ref "k8s.io/client-go/tools/reference"
 	"k8s.io/client-go/util/flowcontrol"
 	"k8s.io/component-base/logs/logreduction"
@@ -82,7 +82,7 @@ type podStateProvider interface {
 
 type kubeGenericRuntimeManager struct {
 	runtimeName string
-	recorder    record.EventRecorder
+	recorder    toolsevents.EventRecorder
 	osInterface kubecontainer.OSInterface
 
 	// machineInfo contains the machine information.
@@ -158,7 +158,7 @@ type LegacyLogProvider interface {
 
 // NewKubeGenericRuntimeManager creates a new kubeGenericRuntimeManager
 func NewKubeGenericRuntimeManager(
-	recorder record.EventRecorder,
+	recorder toolsevents.EventRecorder,
 	livenessManager proberesults.Manager,
 	readinessManager proberesults.Manager,
 	startupManager proberesults.Manager,
@@ -709,7 +709,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(pod *v1.Pod, podStatus *kubecontaine
 			klog.ErrorS(err, "Couldn't make a ref to pod", "pod", klog.KObj(pod))
 		}
 		if podContainerChanges.SandboxID != "" {
-			m.recorder.Eventf(ref, v1.EventTypeNormal, events.SandboxChanged, "Pod sandbox changed, it will be killed and re-created.")
+			m.recorder.Eventf(ref, nil, v1.EventTypeNormal, events.SandboxChanged, "Syncing Pod", "Pod sandbox changed, it will be killed and re-created.")
 		} else {
 			klog.V(4).InfoS("SyncPod received new pod, will create a sandbox for it", "pod", klog.KObj(pod))
 		}
@@ -792,7 +792,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(pod *v1.Pod, podStatus *kubecontaine
 			if referr != nil {
 				klog.ErrorS(referr, "Couldn't make a ref to pod", "pod", klog.KObj(pod))
 			}
-			m.recorder.Eventf(ref, v1.EventTypeWarning, events.FailedCreatePodSandBox, "Failed to create pod sandbox: %v", err)
+			m.recorder.Eventf(ref, nil, v1.EventTypeWarning, events.FailedCreatePodSandBox, "Syncing Pod", "Failed to create pod sandbox: %v", err)
 			return
 		}
 		klog.V(4).InfoS("Created PodSandbox for pod", "podSandboxID", podSandboxID, "pod", klog.KObj(pod))
@@ -803,7 +803,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(pod *v1.Pod, podStatus *kubecontaine
 			if referr != nil {
 				klog.ErrorS(referr, "Couldn't make a ref to pod", "pod", klog.KObj(pod))
 			}
-			m.recorder.Eventf(ref, v1.EventTypeWarning, events.FailedStatusPodSandBox, "Unable to get pod sandbox status: %v", err)
+			m.recorder.Eventf(ref, nil, v1.EventTypeWarning, events.FailedStatusPodSandBox, "Syncing Pod", "Unable to get pod sandbox status: %v", err)
 			klog.ErrorS(err, "Failed to get pod sandbox status; Skipping pod", "pod", klog.KObj(pod))
 			result.Fail(err)
 			return
@@ -920,7 +920,7 @@ func (m *kubeGenericRuntimeManager) doBackOff(pod *v1.Pod, container *v1.Contain
 	key := getStableKey(pod, container)
 	if backOff.IsInBackOffSince(key, ts) {
 		if containerRef, err := kubecontainer.GenerateContainerRef(pod, container); err == nil {
-			m.recorder.Eventf(containerRef, v1.EventTypeWarning, events.BackOffStartContainer, "Back-off restarting failed container")
+			m.recorder.Eventf(containerRef, nil, v1.EventTypeWarning, events.BackOffStartContainer, "Restarting", "Back-off restarting failed container")
 		}
 		err := fmt.Errorf("back-off %s restarting failed container=%s pod=%s", backOff.Get(key), container.Name, format.Pod(pod))
 		klog.V(3).InfoS("Back-off restarting failed container", "err", err.Error())

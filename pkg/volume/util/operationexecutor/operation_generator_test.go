@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	fakeclient "k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/component-base/metrics/legacyregistry"
 	"k8s.io/csi-translation-lib/plugins"
 	"k8s.io/kubernetes/pkg/volume"
@@ -146,7 +146,7 @@ func isLabelsMatchWithMetric(labelFilter map[string]string, metric *io_prometheu
 
 func getTestOperationGenerator(volumePluginMgr *volume.VolumePluginMgr) OperationGenerator {
 	fakeKubeClient := fakeclient.NewSimpleClientset()
-	fakeRecorder := &record.FakeRecorder{}
+	fakeRecorder := &events.FakeRecorder{}
 	fakeHandler := volumetesting.NewBlockVolumePathHandler()
 	operationGenerator := NewOperationGenerator(
 		fakeKubeClient,

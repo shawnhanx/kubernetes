@@ -24,13 +24,13 @@ import (
 	"sync"
 	"time"
 
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
 
-	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/tools/record"
+	toolsevents "k8s.io/client-go/tools/events"
 	statsapi "k8s.io/kubelet/pkg/apis/stats/v1alpha1"
 	"k8s.io/kubernetes/pkg/kubelet/container"
 	"k8s.io/kubernetes/pkg/kubelet/events"
@@ -90,7 +90,7 @@ type realImageGCManager struct {
 	statsProvider StatsProvider
 
 	// Recorder for Kubernetes events.
-	recorder record.EventRecorder
+	recorder toolsevents.EventRecorder
 
 	// Reference to this node.
 	nodeRef *v1.ObjectReference
@@ -149,7 +149,7 @@ type imageRecord struct {
 }
 
 // NewImageGCManager instantiates a new ImageGCManager object.
-func NewImageGCManager(runtime container.Runtime, statsProvider StatsProvider, recorder record.EventRecorder, nodeRef *v1.ObjectReference, policy ImageGCPolicy, sandboxImage string) (ImageGCManager, error) {
+func NewImageGCManager(runtime container.Runtime, statsProvider StatsProvider, recorder toolsevents.EventRecorder, nodeRef *v1.ObjectReference, policy ImageGCPolicy, sandboxImage string) (ImageGCManager, error) {
 	// Validate policy.
 	if policy.HighThresholdPercent < 0 || policy.HighThresholdPercent > 100 {
 		return nil, fmt.Errorf("invalid HighThresholdPercent %d, must be in range [0-100]", policy.HighThresholdPercent)
@@ -293,7 +293,7 @@ func (im *realImageGCManager) GarbageCollect() error {
 	// Check valid capacity.
 	if capacity == 0 {
 		err := goerrors.New("invalid capacity 0 on image filesystem")
-		im.recorder.Eventf(im.nodeRef, v1.EventTypeWarning, events.InvalidDiskCapacity, err.Error())
+		im.recorder.Eventf(im.nodeRef, nil, v1.EventTypeWarning, events.InvalidDiskCapacity, "Checking valid capacity", err.Error())
 		return err
 	}
 
@@ -309,7 +309,7 @@ func (im *realImageGCManager) GarbageCollect() error {
 
 		if freed < amountToFree {
 			err := fmt.Errorf("failed to garbage collect required amount of images. Wanted to free %d bytes, but freed %d bytes", amountToFree, freed)
-			im.recorder.Eventf(im.nodeRef, v1.EventTypeWarning, events.FreeDiskSpaceFailed, err.Error())
+			im.recorder.Eventf(im.nodeRef, nil, v1.EventTypeWarning, events.FreeDiskSpaceFailed, "FreeDiskSpaceFailed", err.Error())
 			return err
 		}
 	}

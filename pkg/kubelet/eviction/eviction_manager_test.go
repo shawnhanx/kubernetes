@@ -21,12 +21,12 @@ import (
 	"testing"
 	"time"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/clock"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	featuregatetesting "k8s.io/component-base/featuregate/testing"
 	statsapi "k8s.io/kubelet/pkg/apis/stats/v1alpha1"
 	kubeapi "k8s.io/kubernetes/pkg/apis/core"
@@ -238,7 +238,7 @@ func TestMemoryPressure(t *testing.T) {
 		imageGC:                      diskGC,
 		containerGC:                  diskGC,
 		config:                       config,
-		recorder:                     &record.FakeRecorder{},
+		recorder:                     &events.FakeRecorder{},
 		summaryProvider:              summaryProvider,
 		nodeRef:                      nodeRef,
 		nodeConditionsLastObservedAt: nodeConditionsObservedAt{},
@@ -503,7 +503,7 @@ func TestDiskPressureNodeFs(t *testing.T) {
 		imageGC:                      diskGC,
 		containerGC:                  diskGC,
 		config:                       config,
-		recorder:                     &record.FakeRecorder{},
+		recorder:                     &events.FakeRecorder{},
 		summaryProvider:              summaryProvider,
 		nodeRef:                      nodeRef,
 		nodeConditionsLastObservedAt: nodeConditionsObservedAt{},
@@ -695,7 +695,7 @@ func TestMinReclaim(t *testing.T) {
 		imageGC:                      diskGC,
 		containerGC:                  diskGC,
 		config:                       config,
-		recorder:                     &record.FakeRecorder{},
+		recorder:                     &events.FakeRecorder{},
 		summaryProvider:              summaryProvider,
 		nodeRef:                      nodeRef,
 		nodeConditionsLastObservedAt: nodeConditionsObservedAt{},
@@ -835,7 +835,7 @@ func TestNodeReclaimFuncs(t *testing.T) {
 		imageGC:                      diskGC,
 		containerGC:                  diskGC,
 		config:                       config,
-		recorder:                     &record.FakeRecorder{},
+		recorder:                     &events.FakeRecorder{},
 		summaryProvider:              summaryProvider,
 		nodeRef:                      nodeRef,
 		nodeConditionsLastObservedAt: nodeConditionsObservedAt{},
@@ -1039,7 +1039,7 @@ func TestInodePressureNodeFsInodes(t *testing.T) {
 		imageGC:                      diskGC,
 		containerGC:                  diskGC,
 		config:                       config,
-		recorder:                     &record.FakeRecorder{},
+		recorder:                     &events.FakeRecorder{},
 		summaryProvider:              summaryProvider,
 		nodeRef:                      nodeRef,
 		nodeConditionsLastObservedAt: nodeConditionsObservedAt{},
@@ -1249,7 +1249,7 @@ func TestStaticCriticalPodsAreNotEvicted(t *testing.T) {
 		imageGC:                      diskGC,
 		containerGC:                  diskGC,
 		config:                       config,
-		recorder:                     &record.FakeRecorder{},
+		recorder:                     &events.FakeRecorder{},
 		summaryProvider:              summaryProvider,
 		nodeRef:                      nodeRef,
 		nodeConditionsLastObservedAt: nodeConditionsObservedAt{},
@@ -1364,7 +1364,7 @@ func TestAllocatableMemoryPressure(t *testing.T) {
 		imageGC:                      diskGC,
 		containerGC:                  diskGC,
 		config:                       config,
-		recorder:                     &record.FakeRecorder{},
+		recorder:                     &events.FakeRecorder{},
 		summaryProvider:              summaryProvider,
 		nodeRef:                      nodeRef,
 		nodeConditionsLastObservedAt: nodeConditionsObservedAt{},
@@ -1513,7 +1513,7 @@ func TestUpdateMemcgThreshold(t *testing.T) {
 		imageGC:                      diskGC,
 		containerGC:                  diskGC,
 		config:                       config,
-		recorder:                     &record.FakeRecorder{},
+		recorder:                     &events.FakeRecorder{},
 		summaryProvider:              summaryProvider,
 		nodeRef:                      nodeRef,
 		nodeConditionsLastObservedAt: nodeConditionsObservedAt{},

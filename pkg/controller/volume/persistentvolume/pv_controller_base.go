@@ -33,11 +33,9 @@ import (
 	coreinformers "k8s.io/client-go/informers/core/v1"
 	storageinformers "k8s.io/client-go/informers/storage/v1"
 	clientset "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
-	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/client-go/util/workqueue"
 	cloudprovider "k8s.io/cloud-provider"
 	csitrans "k8s.io/csi-translation-lib"
@@ -70,7 +68,7 @@ type ControllerParameters struct {
 	ClassInformer             storageinformers.StorageClassInformer
 	PodInformer               coreinformers.PodInformer
 	NodeInformer              coreinformers.NodeInformer
-	EventRecorder             record.EventRecorder
+	EventRecorder             events.EventRecorder
 	EnableDynamicProvisioning bool
 	FilteredDialOptions       *proxyutil.FilteredDialOptions
 }
@@ -79,10 +77,10 @@ type ControllerParameters struct {
 func NewController(p ControllerParameters) (*PersistentVolumeController, error) {
 	eventRecorder := p.EventRecorder
 	if eventRecorder == nil {
-		broadcaster := record.NewBroadcaster()
-		broadcaster.StartStructuredLogging(0)
-		broadcaster.StartRecordingToSink(&v1core.EventSinkImpl{Interface: p.KubeClient.CoreV1().Events("")})
-		eventRecorder = broadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: "persistentvolume-controller"})
+		stopCh := make(chan struct{})
+		broadcaster := events.NewEventBroadcasterAdapter(p.KubeClient)
+		broadcaster.StartRecordingToSink(stopCh)
+		eventRecorder = broadcaster.NewRecorder("persistentvolume-controller")
 	}
 
 	controller := &PersistentVolumeController{

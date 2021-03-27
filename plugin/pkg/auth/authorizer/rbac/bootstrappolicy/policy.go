@@ -119,7 +119,7 @@ func NodeRules() []rbacv1.PolicyRule {
 		rbacv1helpers.NewRule("update", "patch").Groups(legacyGroup).Resources("nodes").RuleOrDie(),
 
 		// TODO: restrict to the bound node as creator in the NodeRestrictions admission plugin
-		rbacv1helpers.NewRule("create", "update", "patch").Groups(legacyGroup).Resources("events").RuleOrDie(),
+		rbacv1helpers.NewRule("create", "update", "patch").Groups(legacyGroup, "events.k8s.io").Resources("events").RuleOrDie(),
 
 		// TODO: restrict to pods scheduled on the bound node once field selectors are supported by list/watch authorization
 		rbacv1helpers.NewRule(Read...).Groups(legacyGroup).Resources("pods").RuleOrDie(),

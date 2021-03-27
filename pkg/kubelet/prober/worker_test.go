@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	kubepod "k8s.io/kubernetes/pkg/kubelet/pod"
 	"k8s.io/kubernetes/pkg/kubelet/prober/results"
 	"k8s.io/kubernetes/pkg/kubelet/status"
@@ -308,7 +308,7 @@ func TestHandleCrash(t *testing.T) {
 
 	// Prober starts crashing.
 	m.prober = &prober{
-		recorder: &record.FakeRecorder{},
+		recorder: &events.FakeRecorder{},
 		exec:     crashingExecProber{},
 	}
 

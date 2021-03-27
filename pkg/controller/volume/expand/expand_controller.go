@@ -36,11 +36,10 @@ import (
 	coreinformers "k8s.io/client-go/informers/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
-	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	kcache "k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
+	toolsevents "k8s.io/client-go/tools/events"
 	"k8s.io/client-go/util/workqueue"
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/kubernetes/pkg/controller/volume/events"
@@ -89,7 +88,7 @@ type expandController struct {
 	volumePluginMgr volume.VolumePluginMgr
 
 	// recorder is used to record events in the API server
-	recorder record.EventRecorder
+	recorder toolsevents.EventRecorder
 
 	operationGenerator operationexecutor.OperationGenerator
 
@@ -130,10 +129,9 @@ func NewExpandController(
 		return nil, fmt.Errorf("could not initialize volume plugins for Expand Controller : %+v", err)
 	}
 
-	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartStructuredLogging(0)
-	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{Interface: kubeClient.CoreV1().Events("")})
-	expc.recorder = eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: "volume_expand"})
+	eventBroadcaster := toolsevents.NewBroadcaster(&toolsevents.EventSinkImpl{Interface: kubeClient.EventsV1()})
+	expc.recorder = eventBroadcaster.NewRecorder(scheme.Scheme, "volume_expand")
+
 	blkutil := volumepathhandler.NewBlockVolumePathHandler()
 
 	expc.operationGenerator = operationexecutor.NewOperationGenerator(
@@ -260,18 +258,18 @@ func (expc *expandController) syncHandler(key string) error {
 		}
 
 		msg := fmt.Sprintf("CSI migration enabled for %s; waiting for external resizer to expand the pvc", inTreePluginName)
-		expc.recorder.Event(pvc, v1.EventTypeNormal, events.ExternalExpanding, msg)
+		expc.recorder.Eventf(pvc, nil, v1.EventTypeNormal, events.ExternalExpanding, "Expanding pvc", msg)
 		csiResizerName, err := expc.translator.GetCSINameFromInTreeName(inTreePluginName)
 		if err != nil {
 			errorMsg := fmt.Sprintf("error getting CSI driver name for pvc %s, with error %v", util.ClaimToClaimKey(pvc), err)
-			expc.recorder.Event(pvc, v1.EventTypeWarning, events.ExternalExpanding, errorMsg)
+			expc.recorder.Eventf(pvc, nil, v1.EventTypeWarning, events.ExternalExpanding, "Expanding pvc", errorMsg)
 			return fmt.Errorf(errorMsg)
 		}
 
 		pvc, err := util.SetClaimResizer(pvc, csiResizerName, expc.kubeClient)
 		if err != nil {
 			errorMsg := fmt.Sprintf("error setting resizer annotation to pvc %s, with error %v", util.ClaimToClaimKey(pvc), err)
-			expc.recorder.Event(pvc, v1.EventTypeWarning, events.ExternalExpanding, errorMsg)
+			expc.recorder.Eventf(pvc, nil, v1.EventTypeWarning, events.ExternalExpanding, "Expanding pvc", errorMsg)
 			return fmt.Errorf(errorMsg)
 		}
 		return nil
@@ -285,7 +283,7 @@ func (expc *expandController) syncHandler(key string) error {
 		if err != nil {
 			eventType = v1.EventTypeWarning
 		}
-		expc.recorder.Event(pvc, eventType, events.ExternalExpanding, fmt.Sprintf("Ignoring the PVC: %v.", msg))
+		expc.recorder.Eventf(pvc, nil, eventType, events.ExternalExpanding, "Expanding pvc", fmt.Sprintf("Ignoring the PVC: %v.", msg))
 		klog.Infof("Ignoring the PVC %q (uid: %q) : %v.", util.GetPersistentVolumeClaimQualifiedName(pvc), pvc.UID, msg)
 		// If we are expecting that an external plugin will handle resizing this volume then
 		// is no point in requeuing this PVC.
@@ -454,7 +452,7 @@ func (expc *expandController) GetNodeName() types.NodeName {
 	return ""
 }
 
-func (expc *expandController) GetEventRecorder() record.EventRecorder {
+func (expc *expandController) GetEventRecorder() toolsevents.EventRecorder {
 	return expc.recorder
 }
 

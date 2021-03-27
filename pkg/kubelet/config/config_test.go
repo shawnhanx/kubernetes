@@ -24,12 +24,12 @@ import (
 	"testing"
 	"time"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/tools/record"
+	clientsetfake "k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/tools/events"
 	kubetypes "k8s.io/kubernetes/pkg/kubelet/types"
 	"k8s.io/kubernetes/pkg/securitycontext"
 )
@@ -86,8 +86,9 @@ func CreatePodUpdate(op kubetypes.PodOperation, source string, pods ...*v1.Pod) 
 }
 
 func createPodConfigTester(mode PodConfigNotificationMode) (chan<- interface{}, <-chan kubetypes.PodUpdate, *PodConfig) {
-	eventBroadcaster := record.NewBroadcaster()
-	config := NewPodConfig(mode, eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: "kubelet"}))
+	client := clientsetfake.NewSimpleClientset()
+	eventBroadcaster := events.NewEventBroadcasterAdapter(client)
+	config := NewPodConfig(mode, eventBroadcaster.NewRecorder("kubelet"))
 	channel := config.Channel(TestSource)
 	ch := config.Updates()
 	return channel, ch, config
