@@ -168,7 +168,6 @@ func TestPersistentVolumeClaimEvaluatorMatchingResources(t *testing.T) {
 				"bronze.storageclass.storage.k8s.io/storage",
 				"gold.storage.k8s.io/requests.storage",
 			},
-
 			want: []corev1.ResourceName{},
 		},
 	}
